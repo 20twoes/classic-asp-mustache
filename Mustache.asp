@@ -7,7 +7,7 @@ Class Mustache
     ' Features implemented so far:
     '   - variable tags
     '   - unescaped variable tags for raw HTML
-    '   - section tags where the key is a list or an empty list
+    '   - section tags where the key is a list, an empty list, or a boolean
     '''
 
     Function make_regex(pattern)
@@ -87,11 +87,16 @@ Class Mustache
         Dim new_context
         If key <> "" And context.Exists(key) Then
             new_context = context(key) 
+            ' Handle the different data types that can be the section key.
             If IsArray(new_context) Then
                 Dim dict
                 For Each dict In new_context
                     parsed_section = parsed_section & Me.render(section("template"), dict)
                 Next
+            ElseIf TypeName(new_context) = "Boolean" Then
+                If new_context Then
+                    parsed_section = section("template")
+                End If
             End If
         End If
         r = Me.replace_(r, parsed_section, section("start_index"), section("end_index"))

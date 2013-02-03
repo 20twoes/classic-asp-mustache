@@ -58,13 +58,13 @@ Class Mustache
         Dim key
         For Each key In context
             If TypeName(context(key)) = "String" Then
-                Set re = Me.make_variable_tag_regex(key, escape)
                 Dim content
                 If escape Then
                     content = Server.HTMLEncode(context(key))
                 Else
                     content = context(key)
                 End If
+                Set re = Me.make_variable_tag_regex(key, escape)
                 r = re.Replace(r, content)
             End If
         Next
@@ -109,6 +109,16 @@ Class Mustache
         replace_ = r
     End Function
 
+    Function cleanup(template)
+        Dim r : r = template
+        ''' Remove leftover variable tags still left in template. '''
+        Dim re : Set re = Me.make_variable_tag_regex("\w*", False)  ' {{{ x }}}
+        r = re.Replace(r, "")
+        Set re = Me.make_variable_tag_regex("\w*", True)  ' {{ x }}
+        r = re.Replace(r, "")
+        cleanup = r
+    End Function
+
     Function render(template_string, context_dictionary)
         ''' The main rendering method of the class.  '''
         Dim tmpl : tmpl = template_string
@@ -123,15 +133,11 @@ Class Mustache
         Loop While tmp <> r
 
         ' Parse variable tags.
+        ' Do unescaped tags first.
         r = Me.parse_variable_tags(r, d, False)
-        'Response.Write r & "<br />"
         r = Me.parse_variable_tags(r, d, True)
 
-        ' Remove leftover vars that don't have a value.
-        Dim re : Set re = Me.make_variable_tag_regex("\w*", False)
-        r = re.Replace(r, "")
-        Set re = Me.make_variable_tag_regex("\w*", True)
-        r = re.Replace(r, "")
+        r = Me.cleanup(r)
 
         render = r
     End Function

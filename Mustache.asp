@@ -76,7 +76,7 @@ Class Mustache
         ''' Parse the first section tag in the template. '''
         Dim r : r = template
         Dim section
-        Set section = Me.regex_match(r, "\{\{#\s*(\w*)\s*\}\}(.*?)\{\{/\s*\1\s*\}\}")
+        Set section = Me.regex_match(r, "\{\{#\s*(\w*)\s*\}\}((.|[\r\n])*?)\{\{/\s*\1\s*\}\}")
 
         Dim key : key = ""
         If section.Exists("key") Then

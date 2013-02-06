@@ -7,7 +7,7 @@ Class Mustache
     ' Features implemented so far:
     '   - variable tags
     '   - unescaped variable tags for raw HTML
-    '   - section tags where the key is a list, an empty list, or a boolean
+    '   - section tags (no support for lambdas)
     '''
 
     Function make_regex(pattern)
@@ -79,24 +79,26 @@ Class Mustache
         Set section = Me.regex_match(r, "\{\{#\s*(\w*)\s*\}\}((.|[\r\n])*?)\{\{/\s*\1\s*\}\}")
 
         Dim key : key = ""
+        Dim tmpl : tmpl = ""
         If section.Exists("key") Then
             key = section("key")
+            tmpl = section("template")
         End If
 
         Dim parsed_section : parsed_section = ""
-        Dim new_context
         If key <> "" And context.Exists(key) Then
-            new_context = context(key) 
             ' Handle the different data types that can be the section key.
-            If IsArray(new_context) Then
+            If IsArray(context(key)) Then
                 Dim dict
-                For Each dict In new_context
-                    parsed_section = parsed_section & Me.render(section("template"), dict)
+                For Each dict In context(key)
+                    parsed_section = parsed_section & Me.render(tmpl, dict)
                 Next
-            ElseIf TypeName(new_context) = "Boolean" Then
-                If new_context Then
-                    parsed_section = section("template")
+            ElseIf TypeName(context(key)) = "Boolean" Then
+                If context(key) Then
+                    parsed_section = tmpl
                 End If
+            ElseIf TypeName(context(key)) = "Dictionary" Then
+                parsed_section = Me.render(tmpl, context(key))
             End If
         End If
         r = Me.replace_(r, parsed_section, section("start_index"), section("end_index"))

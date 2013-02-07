@@ -10,7 +10,40 @@ Class Mustache
     '   - section tags (no support for lambdas)
     '''
 
-    Function make_regex(pattern)
+
+    '''
+    ''' Public methods
+    '''
+
+    Public Function render(template_string, context_dictionary)
+        ''' The main rendering method of the class.  '''
+        Dim tmpl : tmpl = template_string
+        Dim d : Set d = context_dictionary
+        Dim r : r = tmpl
+
+        ' Keep parsing sections til there is no more.
+        Dim tmp
+        Do
+            tmp = r
+            r = parse_section_tag(r, d)
+        Loop While tmp <> r
+
+        ' Parse variable tags.
+        ' Do unescaped tags first.
+        r = parse_variable_tags(r, d, False)
+        r = parse_variable_tags(r, d, True)
+
+        r = cleanup(r)
+
+        render = r
+    End Function
+
+
+    '''
+    ''' Private methods
+    '''
+
+    Private Function make_regex(pattern)
         ''' Basic regex factory '''
         Dim r : Set r = New RegExp
         r.Global = True
@@ -19,7 +52,7 @@ Class Mustache
         Set make_regex = r
     End Function
 
-    Function make_variable_tag_regex(tag, escape)
+    Private Function make_variable_tag_regex(tag, escape)
         ''' Variable tag regex factory '''
         Dim pattern 
         If escape Then
@@ -27,12 +60,12 @@ Class Mustache
         Else
             pattern = "\{\{\{\s*" & tag & "\s*\}\}\}"
         End If
-        Set make_variable_tag_regex = Me.make_regex(pattern)
+        Set make_variable_tag_regex = make_regex(pattern)
     End Function
 
-    Function regex_match(subject, pattern)
+    Private Function regex_match(subject, pattern)
         ''' Return a dictionary with regex match data. '''
-        Dim re : Set re = Me.make_regex(pattern)
+        Dim re : Set re = make_regex(pattern)
         re.Global = False
         Dim matches : Set matches = re.Execute(subject)
         Dim match
@@ -50,21 +83,33 @@ Class Mustache
         Set regex_match = r
     End Function
 
-    Function parse_variable_tags(template, context, escape)
+    Private Function parse_variable_tags(template, context, escape)
         ''' Go through the context dictionary and do a search and replace. '''
         Dim r : r = template
         Dim re
 
         Dim key
         For Each key In context
-            If TypeName(context(key)) = "String" Then
+            Dim allowable_types
+            allowable_types = Array( _
+                "String", _
+                "Integer", _
+                "Long", _
+                "Single", _
+                "Double", _
+                "Decimal", _
+                "Boolean", _
+                "Empty" _
+            )
+            If in_array(allowable_types, TypeName(context(key))) Then
+                Dim value : value = CStr(context(key))
                 Dim content
                 If escape Then
-                    content = Server.HTMLEncode(context(key))
+                    content = Server.HTMLEncode(value)
                 Else
-                    content = context(key)
+                    content = value
                 End If
-                Set re = Me.make_variable_tag_regex(key, escape)
+                Set re = make_variable_tag_regex(key, escape)
                 r = re.Replace(r, content)
             End If
         Next
@@ -72,11 +117,11 @@ Class Mustache
         parse_variable_tags = r
     End Function
 
-    Function parse_section_tag(template, context)
+    Private Function parse_section_tag(template, context)
         ''' Parse the first section tag in the template. '''
         Dim r : r = template
         Dim section
-        Set section = Me.regex_match(r, "\{\{#\s*(\w*)\s*\}\}((.|[\r\n])*?)\{\{/\s*\1\s*\}\}")
+        Set section = regex_match(r, "\{\{#\s*(\w*)\s*\}\}((.|[\r\n])*?)\{\{/\s*\1\s*\}\}")
 
         Dim key : key = ""
         Dim tmpl : tmpl = ""
@@ -91,21 +136,21 @@ Class Mustache
             If IsArray(context(key)) Then
                 Dim dict
                 For Each dict In context(key)
-                    parsed_section = parsed_section & Me.render(tmpl, dict)
+                    parsed_section = parsed_section & render(tmpl, dict)
                 Next
             ElseIf TypeName(context(key)) = "Boolean" Then
                 If context(key) Then
                     parsed_section = tmpl
                 End If
             ElseIf TypeName(context(key)) = "Dictionary" Then
-                parsed_section = Me.render(tmpl, context(key))
+                parsed_section = render(tmpl, context(key))
             End If
         End If
-        r = Me.replace_(r, parsed_section, section("start_index"), section("end_index"))
+        r = replace_(r, parsed_section, section("start_index"), section("end_index"))
         parse_section_tag = r
     End Function
 
-    Function replace_(subject, replace_with, start_index, end_index)
+    Private Function replace_(subject, replace_with, start_index, end_index)
         ''' Replace `subject` from `start_index` to `end_index` with `replace_with`. '''
         Dim r : r = subject  ' default
         If subject <> "" Then
@@ -116,37 +161,26 @@ Class Mustache
         replace_ = r
     End Function
 
-    Function cleanup(template)
-        Dim r : r = template
-        ''' Remove leftover variable tags still left in template. '''
-        Dim re : Set re = Me.make_variable_tag_regex("\w*", False)  ' {{{ x }}}
-        r = re.Replace(r, "")
-        Set re = Me.make_variable_tag_regex("\w*", True)  ' {{ x }}
-        r = re.Replace(r, "")
-        cleanup = r
+    Private Function in_array(arr, needle)
+        Dim r : r = False
+        Dim i
+        For Each i In arr
+            If needle = i Then
+                r = True
+                Exit For
+            End If
+        Next
+        in_array = r
     End Function
 
-    Function render(template_string, context_dictionary)
-        ''' The main rendering method of the class.  '''
-        Dim tmpl : tmpl = template_string
-        Dim d : Set d = context_dictionary
-        Dim r : r = tmpl
-
-        ' Keep parsing sections til there is no more.
-        Dim tmp
-        Do
-            tmp = r
-            r = Me.parse_section_tag(r, d)
-        Loop While tmp <> r
-
-        ' Parse variable tags.
-        ' Do unescaped tags first.
-        r = Me.parse_variable_tags(r, d, False)
-        r = Me.parse_variable_tags(r, d, True)
-
-        r = Me.cleanup(r)
-
-        render = r
+    Private Function cleanup(template)
+        Dim r : r = template
+        ''' Remove leftover variable tags still left in template. '''
+        Dim re : Set re = make_variable_tag_regex("\w*", False)  ' {{{ x }}}
+        r = re.Replace(r, "")
+        Set re = make_variable_tag_regex("\w*", True)  ' {{ x }}
+        r = re.Replace(r, "")
+        cleanup = r
     End Function
 
 End Class

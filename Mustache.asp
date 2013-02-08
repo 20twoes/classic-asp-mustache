@@ -92,14 +92,14 @@ Class Mustache
         For Each key In context
             Dim allowable_types
             allowable_types = Array( _
-                "String", _
-                "Integer", _
-                "Long", _
-                "Single", _
-                "Double", _
-                "Decimal", _
-                "Boolean", _
-                "Empty" _
+                "String" _
+                , "Integer" _
+                , "Long" _
+                , "Single" _
+                , "Double" _
+                , "Decimal" _
+                , "Boolean" _
+                , "Empty" _
             )
             If in_array(allowable_types, TypeName(context(key))) Then
                 Dim value : value = CStr(context(key))

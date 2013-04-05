@@ -16,11 +16,15 @@ Class Mustache
     '''
 
     Public Function render(template_string, context_dictionary)
+        
         ''' The main rendering method of the class.  '''
         Dim tmpl : tmpl = template_string
         Dim d : Set d = context_dictionary
         Dim r : r = tmpl
-
+          
+        'Parse all partials first to put them in the body content of the template
+        r = parse_partials(r, d)
+        
         ' Keep parsing sections til there is no more.
         Dim tmp
         Do
@@ -38,10 +42,38 @@ Class Mustache
         render = r
     End Function
 
-
     '''
     ''' Private methods
     '''
+
+    Private Function parse_partials(template, context)
+        ''' Go through the context dictionary and find partials to load them. '''
+        Dim r : r = template
+        Dim re : Set re = make_regex("\{\{>\s*(\w*)\s*\}\}")
+        Dim matches, key, content, match
+
+        Set matches = re.Execute(r)
+        For Each match in matches
+            For Each key In context
+                if InStr(match, key) then
+                    content = load_partial(context(key), context)
+                    Set re = make_regex("\{\{>\s*" & key & "\s*\}\}")
+                    r = re.Replace(r, content)
+                end if
+            Next
+        Next
+        parse_partials = r
+    
+    End Function
+
+    Private Function load_partial(file, context)
+        ''' Load the partial and render the template. '''
+        Dim loader : Set loader = new MustacheFilesystemLoader
+        Dim tmpl : tmpl = loader.load(file)
+        Dim r : r = render(tmpl, context)
+        Set loader = Nothing
+        load_partial = r
+    End Function
 
     Private Function make_regex(pattern)
         ''' Basic regex factory '''
@@ -66,6 +98,7 @@ Class Mustache
     Private Function regex_match(subject, pattern)
         ''' Return a dictionary with regex match data. '''
         Dim re : Set re = make_regex(pattern)
+
         re.Global = False
         Dim matches : Set matches = re.Execute(subject)
         Dim match
@@ -125,6 +158,7 @@ Class Mustache
 
         Dim key : key = ""
         Dim tmpl : tmpl = ""
+
         If section.Exists("key") Then
             key = section("key")
             tmpl = section("template")

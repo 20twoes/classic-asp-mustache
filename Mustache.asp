@@ -16,17 +16,17 @@ Class Mustache
     '''
 
     Public Function render(template_string, context_dictionary)
-		
+        
         ''' The main rendering method of the class.  '''
         Dim tmpl : tmpl = template_string
         Dim d : Set d = context_dictionary
         Dim r : r = tmpl
           
-		'Parse all partials first to put them in the body content of the template
-		r = parse_partials(r, d)
-		
-		' Keep parsing sections til there is no more.
-		Dim tmp
+        'Parse all partials first to put them in the body content of the template
+        r = parse_partials(r, d)
+        
+        ' Keep parsing sections til there is no more.
+        Dim tmp
         Do
             tmp = r
             r = parse_section_tag(r, d)
@@ -35,45 +35,45 @@ Class Mustache
         ' Parse variable tags.
         ' Do unescaped tags first.
         r = parse_variable_tags(r, d, False)
-        r = parse_variable_tags(r, d, True)		
+        r = parse_variable_tags(r, d, True)
 
         r = cleanup(r)
 
         render = r
     End Function
 
-
     '''
     ''' Private methods
     '''
-	
-	Private Function parse_partials(template, context)
-		''' Go through the context dictionary and find partials to load them. '''
-        Dim r : r = template
-		Dim re : Set re = make_regex("\{\{>\s*(\w*)\s*\}\}")
-		Dim matches, key, content, match
-		
-        Set matches = re.Execute(r)
-		For Each match in matches			
-			For Each key In context
-				if InStr(match, key) then
-					content = load_partial(context(key), context)
-					Set re = make_regex("\{\{>\s*" & key & "\s*\}\}")
-					r = re.Replace(r, content)
-				end if
-			Next
-		Next
 
-		parse_partials = r
-	End Function
-	
-	Private Function load_partial(file, context)
-		''' Load the partial and render the template. '''
-		Dim loader : Set loader = new Mustache_Filesystem_Loader
-		Dim tmpl : tmpl = loader.load(file)
-		Dim r : r = render(tmpl, context)
-		load_partial = r
-	End Function
+    Private Function parse_partials(template, context)
+    ''' Go through the context dictionary and find partials to load them. '''
+    Dim r : r = template
+    Dim re : Set re = make_regex("\{\{>\s*(\w*)\s*\}\}")
+    Dim matches, key, content, match
+
+    Set matches = re.Execute(r)
+    For Each match in matches
+        For Each key In context
+            if InStr(match, key) then
+                content = load_partial(context(key), context)
+                Set re = make_regex("\{\{>\s*" & key & "\s*\}\}")
+                r = re.Replace(r, content)
+            end if
+        Next
+    Next
+    parse_partials = r
+    
+    End Function
+
+    Private Function load_partial(file, context)
+        ''' Load the partial and render the template. '''
+        Dim loader : Set loader = new MustacheFilesystemLoader
+        Dim tmpl : tmpl = loader.load(file)
+        Dim r : r = render(tmpl, context)
+        Set loader = Nothing
+        load_partial = r
+    End Function
 
     Private Function make_regex(pattern)
         ''' Basic regex factory '''
@@ -92,28 +92,27 @@ Class Mustache
         Else
             pattern = "\{\{\{\s*" & tag & "\s*\}\}\}"
         End If
-		
-        Set make_variable_tag_regex = make_regex(pattern)		
+        Set make_variable_tag_regex = make_regex(pattern)
     End Function
 
     Private Function regex_match(subject, pattern)
         ''' Return a dictionary with regex match data. '''
         Dim re : Set re = make_regex(pattern)
-		
+
         re.Global = False
         Dim matches : Set matches = re.Execute(subject)
         Dim match
-        Dim r : Set r = Server.CreateObject("Scripting.Dictionary")		
-        For Each match In matches		
+        Dim r : Set r = Server.CreateObject("Scripting.Dictionary")
+        For Each match In matches
             ' We only need the first one since we set Global = False
             r.Add "start_index", match.FirstIndex
             r.Add "end_index", match.FirstIndex + match.Length
             'r.Add "length", match.Length  ' Not needed for now
             'r.Add "value", match.Value
             r.Add "key", match.SubMatches(0)
-            r.Add "template", match.SubMatches(1)			
+            r.Add "template", match.SubMatches(1)
             Exit For
-        Next		
+        Next
         Set regex_match = r
     End Function
 
@@ -144,7 +143,7 @@ Class Mustache
                     content = value
                 End If
                 Set re = make_variable_tag_regex(key, escape)
-                r = re.Replace(r, content)				
+                r = re.Replace(r, content)
             End If
         Next
 
@@ -152,16 +151,16 @@ Class Mustache
     End Function
 
     Private Function parse_section_tag(template, context)
-        ''' Parse the first section tag in the template. '''		
+        ''' Parse the first section tag in the template. '''
         Dim r : r = template
         Dim section
         Set section = regex_match(r, "\{\{#\s*(\w*)\s*\}\}((.|[\r\n])*?)\{\{/\s*\1\s*\}\}")
 
         Dim key : key = ""
         Dim tmpl : tmpl = ""
-		
+
         If section.Exists("key") Then
-            key = section("key")	
+            key = section("key")
             tmpl = section("template")
         End If
 

@@ -1,5 +1,5 @@
 <%
-Class Mustache_Filesystem_Loader
+Class MustacheFilesystemLoader
 	'''
     ' This class allows the use of different file partials.  http://mustache.github.com/
     ' To use:  loader = new Mustache_Filesystem_Loader
@@ -40,8 +40,7 @@ Class Mustache_Filesystem_Loader
 	'''
     Public Function load(name)
 		Dim contents
-        contents = loadFile(name)
-		call cleanup
+        contents = loadFile(name)		
 		load = contents
 	End Function
 
@@ -74,8 +73,8 @@ Class Mustache_Filesystem_Loader
 	'''
     ' Cleanup function
     '''
-	Private Function cleanup()
+	Private Sub Class_Terminate()
 		Set file_object = Nothing
-	End Function
+	End Sub	
 End Class
 %>

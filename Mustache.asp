@@ -47,22 +47,22 @@ Class Mustache
     '''
 
     Private Function parse_partials(template, context)
-    ''' Go through the context dictionary and find partials to load them. '''
-    Dim r : r = template
-    Dim re : Set re = make_regex("\{\{>\s*(\w*)\s*\}\}")
-    Dim matches, key, content, match
+        ''' Go through the context dictionary and find partials to load them. '''
+        Dim r : r = template
+        Dim re : Set re = make_regex("\{\{>\s*(\w*)\s*\}\}")
+        Dim matches, key, content, match
 
-    Set matches = re.Execute(r)
-    For Each match in matches
-        For Each key In context
-            if InStr(match, key) then
-                content = load_partial(context(key), context)
-                Set re = make_regex("\{\{>\s*" & key & "\s*\}\}")
-                r = re.Replace(r, content)
-            end if
+        Set matches = re.Execute(r)
+        For Each match in matches
+            For Each key In context
+                if InStr(match, key) then
+                    content = load_partial(context(key), context)
+                    Set re = make_regex("\{\{>\s*" & key & "\s*\}\}")
+                    r = re.Replace(r, content)
+                end if
+            Next
         Next
-    Next
-    parse_partials = r
+        parse_partials = r
     
     End Function
 
